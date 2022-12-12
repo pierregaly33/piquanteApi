@@ -1,6 +1,6 @@
 const Sauce = require("../models/sauces");
 const fs = require("fs");
-const { error } = require("console");
+const { json } = require("express");
 
 exports.findAllSauces = (req, res, next) => {
     Sauce.find()
@@ -46,4 +46,26 @@ exports.deleteSauces = (req, res, next) => {
             }
         })
         .catch((error) => res.status(500).json({ error }));
+};
+
+exports.updateSauces = (req, res, next) => {
+    const sauceObject = req.file
+        ? {
+              ...JSON.parse(req.body.sauce),
+              imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}`,
+          }
+        : { ...req.body };
+
+    delete sauceObject.userId;
+    Sauce.findOne({ _id: req.params.id })
+        .then((sauce) => {
+            if (sauce.userId != req.auth.userId) {
+                res.status(400).json({ message: "Non-autorisé ! " });
+            } else {
+                Sauce.updateOne({ _id: req.params.id }, { ...sauceObject, _id: req.params.id })
+                    .then(() => res.status(200).json({ message: "Objet modifié ! " }))
+                    .catch((error) => res.status(401).json({ error }));
+            }
+        })
+        .catch((error) => res.staus(400).json({ error }));
 };
